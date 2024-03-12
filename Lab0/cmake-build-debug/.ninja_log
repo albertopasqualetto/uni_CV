@@ -1,0 +1,10 @@
+# ninja log v5
+1	919	7318758451833072	CMakeFiles/helloWorld.dir/main.cpp.obj	3d129b6a97d92c08
+712	849	7319582051881776	Lab0.exe	fb38bf91b61d3f6b
+919	1071	7318758452986871	helloWorld.exe	a0ec71637145efb9
+1	89	7319582632945714	build.ninja	2c55a10607f7e3e0
+1	712	7319582050811217	CMakeFiles/Lab0.dir/task4.cpp.obj	a072b96af6b7a399
+0	664	7319579235874763	CMakeFiles/Lab0.dir/task3.cpp.obj	cceb149fac94ae75
+0	968	7318764740356849	CMakeFiles/Lab0.dir/main.cpp.obj	10941ba436b8f354
+1	654	7318769121123370	CMakeFiles/Lab0.dir/task2.cpp.obj	4132ccb68ec00a88
+1	653	7319556972460408	CMakeFiles/Lab0.dir/task5.cpp.obj	38dc85144b28372
