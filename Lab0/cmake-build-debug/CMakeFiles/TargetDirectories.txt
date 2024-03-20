@@ -1,3 +1,0 @@
-C:/Users/alber/Desktop/Computer Vision/Lab0/cmake-build-debug/CMakeFiles/Lab0.dir
-C:/Users/alber/Desktop/Computer Vision/Lab0/cmake-build-debug/CMakeFiles/edit_cache.dir
-C:/Users/alber/Desktop/Computer Vision/Lab0/cmake-build-debug/CMakeFiles/rebuild_cache.dir
