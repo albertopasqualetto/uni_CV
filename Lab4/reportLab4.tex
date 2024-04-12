@@ -61,18 +61,37 @@ The results of Canny filter with different thresholds are shown in figure \ref{f
 \section*{Task 2}
 In task 2 it is required to detect the white lines on the road without using the Hough transform.
 
-In order to do that first of all a mask for white color is created using the function \texttt{cv::inRange} and a very limited range.
-Starting from the mask, 2 points for each white line (the middle and the right ones) on the image are found by looking for the first white pixel starting from the middle of the image going left (for left line) and right (for right line) at 2 different heights (4/6 and 5/6 of the image height, selected empirically).
+% OLD APPROACH:
+% In order to do that first of all a mask for white color is created using the function \texttt{cv::inRange} and a very limited range.
+% Starting from the mask, 2 points for each white line (the middle and the right ones) on the image are found by looking for the first white pixel starting from the middle of the image going left (for left line) and right (for right line) at 2 different heights (4/6 and 5/6 of the image height, selected empirically).
+% Finally the equation of the line is calculated using the 2 points found for each line and both lines are drawn on the image in red as shown in figure \ref{fig:lines_noHough}.
 
-Finally the equation of the line is calculated using the 2 points found for each line and both lines are drawn on the image in red as shown in figure \ref{fig:lines_noHough}.
+% \begin{figure}[H]
+	% 	\centering
+	% 	\includegraphics[width=0.9\textwidth]{street_scene_oldLinesNoHough.png}
+	% 	\caption{Lines detected without Hough transform}
+	% 	\label{fig:lines_oldNoHough}
+	% \end{figure}
+%%%%%%%%%%%%%%%
+
+First of all a mask for white color is created using the function \texttt{cv::inRange} starting from the grayscale image and a very limited range.
+Then Sobel filter is applied on the mask both in x and y directions to detect diagonal edges in the image (kernel size set to 7).
+In order to keep only edges that can be part of road lines a triangular mask is created and applied to the Sobel filter result, see figure \ref{fig:triangular_mask}. I think this is a doable approach since the road lines are always in the lower part of the image and they are diagonal, this mask can be fine-tuned knowing the position of the camera in the car.
+\begin{figure}[h]
+		\centering
+		\includegraphics[width=0.9\textwidth]{centeringMask.png}
+		\caption{Triangular mask to keep only the edges that can be part of road lines (corners: (columns/2, rows/2), (1/4*columns, rows), (3/4*columns, rows))}
+		\label{fig:triangular_mask}
+\end{figure}
+Finally an erosion and then a dilation is applied to reduce noise and enlarge the lines, the result is shown in figure \ref{fig:lines_noHough}.
+
 
 \begin{figure}[H]
-	\centering
-	\includegraphics[width=0.9\textwidth]{street_scene_linesNoHough.png}
-	\caption{Lines detected without Hough transform}
-	\label{fig:lines_noHough}
+		\centering
+		\includegraphics[width=0.9\textwidth]{street_scene_LinesNoHough.png}
+		\caption{Lines detected without Hough transform}
+		\label{fig:lines_noHough}
 \end{figure}
-
 
 
 \section*{Task 3}

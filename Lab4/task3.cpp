@@ -125,7 +125,7 @@ int main(int argc, char** argv){
 		}
 	}
 	// Draw the polygon
-	fillPoly(roadImg, polyVertices, Scalar(0, 0, 255));
+	fillConvexPoly(roadImg, polyVertices, Scalar(0, 0, 255));
 
 //	for (Point intersect : polyVertices)
 //		circle(roadImg, intersect, 5, Scalar(0, 255, 0), 2);

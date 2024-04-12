@@ -6,13 +6,6 @@
 using namespace cv;
 
 
-// Gives the equation of the line passing through two points in the form y = mx + q
-void equationFormula(double x1, double y1, double x2, double y2, double &m, double &q){
-	m = (y2-y1)/(x2-x1);
-	q = -x1*m + y1;
-}
-
-
 int main(int argc, char** argv){
 	std::string filename = "street_scene.png";
 	Mat src = imread(filename);
@@ -20,61 +13,42 @@ int main(int argc, char** argv){
 		std::cerr<<"The image cannot be read (because of missing file, improper permissions, unsupported or invalid format)"<<std::endl;
 		return 1;
 	}
-//	drawMarker(src, Point(src.cols/2, src.rows*4/6), Scalar(0, 255, 0), MARKER_CROSS, 10, 1);
-//	drawMarker(src, Point(src.cols/2, src.rows*5/6), Scalar(0, 255, 0), MARKER_CROSS, 10, 1);
-//	line(src, Point(src.cols/2 -1000, src.rows*4/6), Point(src.cols/2 +1000, src.rows*4/6), Scalar(0, 255, 0), 1, LINE_8);
-//	line(src, Point(src.cols/2 -1000, src.rows*5/6), Point(src.cols/2 +1000, src.rows*5/6), Scalar(0, 255, 0), 1, LINE_8);
+
 	imshow("Original image", src);
 
+	Mat greyImg;
+	cvtColor(src, greyImg, COLOR_BGR2GRAY);
+
+//	GaussianBlur(src, src, Size(3, 3), 0, 0);
+//	imshow("Blurred image", src);
+
 	Mat mask;
-//	Mat hsvImg;
-//	cvtColor(src, hsvImg, COLOR_BGR2HSV);
-//	inRange(hsvImg, Vec3b(0, 0, 230), Vec3b(255, 0, 255), mask);
-	inRange(src, Vec3b(240, 240, 240), Vec3b(255, 255, 255), mask); // Pick the white color in the image
+	inRange(greyImg, Vec<uchar, 1>(240), Vec<uchar, 1>(255), mask); // Pick the white color in the image
+	imshow("Mask", mask);
 
-	// Find the 2 points of the middle (left) line and 2 of the right one in the mask by starting from the horizontal middle and going left and right at different heights, selected empirically at x=4/6 and x=5/6 of the image height
-	Point l1, l2, r1, r2;
-	for(int j=mask.cols/2; j>=0; j--){
-		if(mask.at<uchar>(src.rows*4/6, j)==255){
-			l1.x = j;
-			l1.y = src.rows*4/6;
-			break;
-		}
-	}
-	for(int j=mask.cols/2; j>=0; j--){
-		if(mask.at<uchar>(src.rows*5/6, j)==255){
-			l2.x = j;
-			l2.y = src.rows*5/6;
-			break;
-		}
-	}
-	for(int j=mask.cols/2; j<mask.cols; j++){
-		if(mask.at<uchar>(src.rows*4/6, j)==255){
-			r1.x = j;
-			r1.y = src.rows*4/6;
-			break;
-		}
-	}
-	for(int j=mask.cols/2; j<mask.cols; j++){
-		if(mask.at<uchar>(src.rows*5/6, j)==255){
-			r2.x = j;
-			r2.y = src.rows*5/6;
-			break;
-		}
-	}
+	// Apply Sobel filter both in x and y directions to get diagonal edges
+	Mat sobelImg;
+	Sobel(mask, sobelImg, CV_64F, 1, 1, 7);
+//	imshow("Sobel image", sobelImg);
+	convertScaleAbs(sobelImg, sobelImg);    // Convert the result back to CV_8U
 
-	Mat linesImg = src.clone();
-	// get the equations of the lines
-	double ml, ql, mr, qr;
-	equationFormula(l1.x, l1.y, l2.x, l2.y, ml, ql);
-	equationFormula(r1.x, r1.y, r2.x, r2.y, mr, qr);
+	// Create and apply a triangular mask to keep only the bottom-center of the image
+	Mat centeringMask = Mat::zeros(mask.size(), CV_8UC1);
+	fillConvexPoly(centeringMask, std::vector<Point>{Point(mask.cols/2, mask.rows/2), Point(1.0/4.0 * mask.cols, mask.rows), Point(3.0/4.0 * mask.cols, mask.rows)}, Scalar(255));
+//	imshow("Centering mask", centeringMask);
+	bitwise_and(sobelImg, centeringMask, sobelImg);
 
-	//draw the lines from the middle of the image to the bottom
-	line(linesImg, Point(linesImg.cols/2, linesImg.cols/2 *ml +ql), Point(0, 0 *ml +ql), Scalar(0, 0, 255), 2, LINE_AA);
-	line(linesImg, Point(linesImg.cols/2, linesImg.cols/2 *mr +qr), Point(linesImg.cols, linesImg.cols *mr +qr), Scalar(0, 0, 255), 2, LINE_AA);
-
+	// Erode and dilate the image to remove noise in lines and make them thicker
+	Mat linesImg;
+	Mat kernelErode = getStructuringElement(MORPH_CROSS, Size(5, 5));
+	erode(sobelImg, linesImg, kernelErode);
+	Mat kernelDilate = getStructuringElement(MORPH_ELLIPSE, Size(7, 7));
+	dilate(linesImg, linesImg, kernelDilate);
 	imshow("Lines image", linesImg);
 
+	// Draw the lines on the original image
+	src.setTo(Vec3b(0, 0, 255), linesImg);
+	imshow("Result", src);
 
 	waitKey(0);
 	return 0;
