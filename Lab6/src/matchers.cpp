@@ -37,7 +37,7 @@ void printSimilarity(const std::vector<cv::DMatch> &matches, float similarityThr
 }
 
 
-cv::Mat bruteForceSIFTMatching(const cv::Mat &img1, const cv::Mat &img2, bool toPrintSimilarity=false){
+cv::Mat bruteForceSIFTMatching(const cv::Mat &img1, const cv::Mat &img2, bool toPrintSimilarity /*= false*/){
 	cv::Ptr<cv::SIFT> sift = cv::SIFT::create();
 
 	std::vector<cv::KeyPoint> keypoints1, keypoints2;
@@ -60,7 +60,7 @@ cv::Mat bruteForceSIFTMatching(const cv::Mat &img1, const cv::Mat &img2, bool to
 }
 
 
-cv::Mat bruteForceORBMatching(const cv::Mat &img1, const cv::Mat &img2, bool toPrintSimilarity=false){
+cv::Mat bruteForceORBMatching(const cv::Mat &img1, const cv::Mat &img2, bool toPrintSimilarity /*= false*/){
 	cv::Ptr<cv::ORB> orb = cv::ORB::create();
 
 	std::vector<cv::KeyPoint> keypoints1, keypoints2;

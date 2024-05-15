@@ -10,9 +10,9 @@ void applyLoweRatio(cv::Ptr<cv::BFMatcher> bfMatcher, cv::Mat &descriptors1, cv:
 void printSimilarity(const std::vector<cv::DMatch> &matches, float similarityThreshold, float strongTransformThreshold);
 
 
-cv::Mat bruteForceSIFTMatching(const cv::Mat &img1, const cv::Mat &img2, bool toPrintSimilarity);
+cv::Mat bruteForceSIFTMatching(const cv::Mat &img1, const cv::Mat &img2, bool toPrintSimilarity = false);
 
 
-cv::Mat bruteForceORBMatching(const cv::Mat &img1, const cv::Mat &img2, bool toPrintSimilarity);
+cv::Mat bruteForceORBMatching(const cv::Mat &img1, const cv::Mat &img2, bool toPrintSimilarity = false);
 
 #endif //MATCHERS_H
