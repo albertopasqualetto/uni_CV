@@ -338,3 +338,13 @@ TSWLatexianTemp*
 # Uncomment the next line to have this generated file ignored.
 #*Notes.bib
 
+
+# outputs
+out*
+*/outputs/*
+
+# images
+*/dataset/*
+*/data/*
+*/images/*
+*/Images/*
