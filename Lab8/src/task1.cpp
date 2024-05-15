@@ -1,45 +1,14 @@
+#include <iostream>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgcodecs.hpp>
-#include <iostream>
-#include <filesystem>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/imgproc.hpp>
+#include "cameraCalibration.h"
+#include "utils.h"
 
 using namespace cv;
 using namespace std;
 
-namespace fs = std::filesystem;
-
-bool hasEnding (std::string const &fullString, std::string const &ending) {
-	if (fullString.length() >= ending.length()) {
-		return (0 == fullString.compare (fullString.length() - ending.length(), ending.length(), ending));
-	} else {
-		return false;
-	}
-}
-
-
-Mat mergeImages(const Mat &img1, const Mat &img2, bool verticalArrangement = false){
-	int rows;
-	int cols;
-
-	if(verticalArrangement){
-		rows = img1.rows + img2.rows;
-		cols = max(img1.cols, img2.cols);
-	} else{
-		rows = max(img1.rows, img2.rows);
-		cols = img1.cols + img2.cols;
-	}
-
-	cout<<"Rows: "<<rows<<" Cols: "<<cols<<endl;
-
-	Mat outputMat(rows, cols, img1.type(), Vec3b(0, 0, 0));
-
-	img1.copyTo(outputMat(Rect(0, 0, img1.cols, img1.rows)));
-	img2.copyTo(outputMat(Rect(img1.cols, 0, img2.cols, img2.rows)));
-
-	return outputMat;
-}
 
 /*
  * "images" folder:
@@ -53,12 +22,17 @@ Mat mergeImages(const Mat &img1, const Mat &img2, bool verticalArrangement = fal
  * patternSize: 6x5
  * squareSize: 11 cm
  * gridWidth: ~66 cm
+ * -> Camera matrix: [1122.690781519136, 0, 699.4422259690488;
+					 0, 1159.338656564772, 262.8058122486522;
+					 0, 0, 1]
+ * -> Average reprojection error: 1.50696
  */
 
 
 const Size patternSize = Size(6, 5);
 const float squareSize = 110;   // mm
 const float gridWidth = 660;   // mm
+
 
 int main(int argc, char** argv){
 	if(argc != 2){
@@ -67,16 +41,7 @@ int main(int argc, char** argv){
 	}
 
 	vector<string> filenames;
-	for (const auto &entry : fs::directory_iterator(argv[1])){
-		if (hasEnding(entry.path().string(), ".jpg") ||
-				hasEnding(entry.path().string(), ".jpeg") ||
-				hasEnding(entry.path().string(), ".png") ||
-				hasEnding(entry.path().string(), ".bmp") ||
-				hasEnding(entry.path().string(), ".tiff") ||
-				hasEnding(entry.path().string(), ".tif")) {
-			filenames.push_back(entry.path().string());
-		}
-	}
+	getImagesFilenamesInFolder(argv[1], filenames);
 
 	vector<vector<Point2f>> imagePoints;
 
@@ -108,49 +73,21 @@ int main(int argc, char** argv){
 			imagePoints.push_back(corners);
 		}
 
-		drawChessboardCorners(img, patternSize, Mat(corners), patternFound);
-		imshow("Image "+to_string(i), img);
+//		drawChessboardCorners(img, patternSize, Mat(corners), patternFound);
+//		imshow("Image "+to_string(i), img);
 	}
 	waitKey(0);
 
-	vector<vector<Point3f>> objectPoints(1);
-	for (int i = 0; i < patternSize.height; ++i) {
-		for (int j = 0; j < patternSize.width; ++j) {
-			objectPoints[0].push_back(Point3f(j * squareSize, i * squareSize, 0));
-		}
-	}
-	objectPoints[0][patternSize.width - 1].x = objectPoints[0][0].x + gridWidth;
-	vector<Point3f> newObjPoints;
-	newObjPoints = objectPoints[0];
-
-	objectPoints.resize(imagePoints.size(),objectPoints[0]);
-
+	vector<vector<Point3f>> objectPoints = createObjectPoints(patternSize, squareSize, gridWidth, imagePoints);
 
 	Mat cameraMatrix, distCoeffs;
 	vector<Mat> rvecs, tvecs;
 	calibrateCamera(objectPoints, imagePoints, images[0].size(), cameraMatrix, distCoeffs, rvecs, tvecs);
 
-	vector<float> perViewErrors;
-	vector<Point2f> imagePoints2;
-	int totalPoints = 0;
-	double totalErr = 0, err;
-
-	perViewErrors.resize(objectPoints.size());
-
-	for(int i = 0; i < objectPoints.size(); ++i ){
-		projectPoints(objectPoints[i], rvecs[i], tvecs[i], cameraMatrix, distCoeffs, imagePoints2);
-		err = norm(imagePoints[i], imagePoints2, NORM_L2);
-		perViewErrors[i] = static_cast<float>(std::sqrt(err*err/objectPoints[i].size()));
-		totalErr += err;
-		totalPoints += objectPoints[i].size();
-
-	}
-
-	double avg_reprojection_error = sqrt(totalErr/totalPoints);
+	double avg_reprojection_error = calcAvgReprojErr(imagePoints, objectPoints, cameraMatrix, distCoeffs, rvecs, tvecs);
 
 	cout<<"Camera matrix: "<<cameraMatrix<<endl;
 	cout<<"Average reprojection error: "<<avg_reprojection_error<<endl;
-
 
 
 	Mat map1, map2;
