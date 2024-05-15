@@ -97,12 +97,12 @@ int main(int argc, char** argv){
 		vector<Point2f> corners;
 		bool patternFound = findChessboardCorners(img, patternSize, corners, CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE);
 
-		if(patternFound){
-			Mat gray;
-			cvtColor(img, gray, COLOR_BGR2GRAY);
-			cornerSubPix(gray, corners, Size(11, 11), Size(-1, -1),
-				TermCriteria(TermCriteria::Type::COUNT + TermCriteria::Type::EPS, 30, 0.1));
-		}
+//		if(patternFound){
+//			Mat gray;
+//			cvtColor(img, gray, COLOR_BGR2GRAY);
+//			cornerSubPix(gray, corners, Size(11, 11), Size(-1, -1),
+//				TermCriteria(TermCriteria::Type::COUNT + TermCriteria::Type::EPS, 30, 0.1));
+//		}
 
 		if(patternFound){
 			imagePoints.push_back(corners);
