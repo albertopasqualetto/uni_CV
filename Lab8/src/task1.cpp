@@ -14,103 +14,95 @@ using namespace std;
  * "images" folder:
  * patternSize: 9x6
  * squareSize: 22 mm
- * gridWidth: 199 mm
+ * gridWidth: 177 mm
+ * -> Camera matrix:
+ * -> Average reprojection error:
  */
 
 /*
  * "data" folder:
  * patternSize: 6x5
  * squareSize: 11 cm
- * gridWidth: ~66 cm
- * -> Camera matrix: [1122.690781519136, 0, 699.4422259690488;
-					 0, 1159.338656564772, 262.8058122486522;
-					 0, 0, 1]
- * -> Average reprojection error: 1.50696
+ * -> Camera matrix:
+ * -> Average reprojection error:
  */
 
 
 const Size patternSize = Size(6, 5);
-const float squareSize = 110;   // mm
-const float gridWidth = 660;   // mm
+const float squareSize = 110;
+const float gridWidth = -1;
 
 
 int main(int argc, char** argv){
 	if(argc != 2){
-		cerr<<"A folder name and camera FoV shall be provided!"<<endl;
+		cerr<<"A folder name shall be provided!"<<endl;
 		return 1;
 	}
 
 	vector<string> filenames;
 	getImagesFilenamesInFolder(argv[1], filenames);
 
-	vector<vector<Point2f>> imagePoints;
-
 	if(filenames.empty()){
 		cerr<<"No images found in the folder!"<<endl;
 		return 1;
 	}
-	vector<Mat> images;
-	for(int i=0; i<filenames.size(); i++){
-		Mat img = imread(filenames[i]);
-		if (!img.data){
-			cerr<<"Image cannot be read (because of missing file, improper permissions, unsupported or invalid format)"<<endl;
-			return 1;
-		}
-		images.push_back(img);
 
+	vector<Mat> images;
+	vector<vector<Point2f>> imagePoints;
+	vector<Point3f> oneObjectPoint = createOneObjectPoints(patternSize, squareSize, gridWidth);
+	vector<vector<Point3f>> objectPoints;
+
+	loadImages(filenames, images, [&](int i){
 		// Find chessboard corners
 		vector<Point2f> corners;
-		bool patternFound = findChessboardCorners(img, patternSize, corners, CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE);
-
-//		if(patternFound){
-//			Mat gray;
-//			cvtColor(img, gray, COLOR_BGR2GRAY);
-//			cornerSubPix(gray, corners, Size(11, 11), Size(-1, -1),
-//				TermCriteria(TermCriteria::Type::COUNT + TermCriteria::Type::EPS, 30, 0.1));
-//		}
+		bool patternFound = findChessboardCorners(images[i], patternSize, corners, CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE);
 
 		if(patternFound){
+			Mat gray;
+			cvtColor(images[0], gray, COLOR_BGR2GRAY);
+			cornerSubPix(gray, corners, Size(11, 11), Size(-1, -1),
+				TermCriteria(TermCriteria::Type::COUNT + TermCriteria::Type::EPS, 30, 0.1)
+				);
+
 			imagePoints.push_back(corners);
+			objectPoints.push_back(oneObjectPoint);
 		}
 
-//		drawChessboardCorners(img, patternSize, Mat(corners), patternFound);
-//		imshow("Image "+to_string(i), img);
-	}
-	waitKey(0);
 
-	vector<vector<Point3f>> objectPoints = createObjectPoints(patternSize, squareSize, gridWidth, imagePoints);
+//		drawChessboardCorners(images[i], patternSize, Mat(corners), patternFound);
+//		imshow("Image "+to_string(i), images[i]);
+	});
+//	waitKey(0);
 
 	Mat cameraMatrix, distCoeffs;
 	vector<Mat> rvecs, tvecs;
 	calibrateCamera(objectPoints, imagePoints, images[0].size(), cameraMatrix, distCoeffs, rvecs, tvecs);
 
-	double avg_reprojection_error = calcAvgReprojErr(imagePoints, objectPoints, cameraMatrix, distCoeffs, rvecs, tvecs);
-
+	Rect roi;
+	Mat newCameraMatrix = getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, images[0].size(), 0, images[0].size(), &roi);
 	cout<<"Camera matrix: "<<cameraMatrix<<endl;
+	cout<<"New Camera matrix: "<<newCameraMatrix<<endl;
+
+	double avg_reprojection_error = calcAvgReprojErr(imagePoints, objectPoints, cameraMatrix, distCoeffs, rvecs, tvecs);
 	cout<<"Average reprojection error: "<<avg_reprojection_error<<endl;
 
-
-	Mat map1, map2;
-	initUndistortRectifyMap(cameraMatrix, vector<int>(), Mat(), cameraMatrix, images[0].size(), CV_16SC2, map1, map2);
-
-	for(int i=0; i<images.size(); i++){
-		Mat remappedMat;
-		remap(images[i], remappedMat, map1, map2, INTER_LINEAR);
-		cout<<"Image "<<i<<": "<<images[i].dims<<" "<<images[i].size<<" "<<images[i].type()<<endl;
-		cout<<"Remapped img: "<<remappedMat.dims<<" "<<remappedMat.size<<" "<<remappedMat.type()<<endl;
-		Mat outputMat = mergeImages(images[i], remappedMat);
-		imshow("out"+to_string(i), outputMat);
-		imwrite("outputs/out"+to_string(i)+".jpg", outputMat);
-	}
-	Mat remappedMat;
+//	for(int i=0; i<images.size(); i++){
+//		Mat undistortedImg;
+//		undistort(images[i], undistortedImg, cameraMatrix, distCoeffs, newCameraMatrix);
+//		cout<<"Image "<<i<<": "<<images[i].dims<<" "<<images[i].size<<" "<<images[i].type()<<endl;
+//		cout << "Undistorted img: " << undistortedImg.dims << " " << undistortedImg.size << " " << undistortedImg.type() << endl;
+//		Mat outputMat = mergeImages(images[i], undistortedImg);
+//		imshow("out"+to_string(i), outputMat);
+//		imwrite("outputs/out"+to_string(i)+".jpg", outputMat);
+//	}
+	Mat undistortedImg;
 	Mat testImg = imread("data/test_image.png");
-	remap(testImg, remappedMat, map1, map2, INTER_LINEAR);
-	Mat outputMat = mergeImages(testImg, remappedMat);
+	undistort(testImg, undistortedImg, cameraMatrix, distCoeffs, newCameraMatrix);
+	undistortedImg = undistortedImg(roi);
+	Mat outputMat = mergeImages(testImg, undistortedImg);
 	imshow("outTest", outputMat);
 	imwrite("outputs/outTest.jpg", outputMat);
 
-
-//	imwrite("out.jpg", outputMat);
 
 	waitKey(0);
 	return 0;

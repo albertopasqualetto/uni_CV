@@ -14,7 +14,7 @@ bool hasEnding (std::string const &fullString, std::string const &ending){
 }
 
 
-void getImagesFilenamesInFolder(const std::string &folderPath, std::vector<std::string> filenames){
+void getImagesFilenamesInFolder(const std::string &folderPath, std::vector<std::string> &filenames){
 	for (const auto &entry : std::filesystem::directory_iterator(folderPath)){
 		if (hasEnding(entry.path().string(), ".jpg") ||
 				hasEnding(entry.path().string(), ".jpeg") ||
@@ -28,7 +28,7 @@ void getImagesFilenamesInFolder(const std::string &folderPath, std::vector<std::
 }
 
 
-void loadImages(const std::vector<std::string> &filenames, std::vector<cv::Mat> &images){
+void loadImages(const std::vector<std::string> &filenames, std::vector<cv::Mat> &images, const std::function<void(int)>& func /*= nullptr*/) {
 	for(int i=0; i<filenames.size(); i++){
 		cv::Mat img = cv::imread(filenames[i]);
 		if (!img.data){
@@ -36,7 +36,12 @@ void loadImages(const std::vector<std::string> &filenames, std::vector<cv::Mat> 
 			return;
 		}
 		images.push_back(img);
+
+		if(func != nullptr){
+			func(i);
+		}
 	}
+
 }
 
 
